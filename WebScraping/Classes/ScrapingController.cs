@@ -15,6 +15,8 @@ namespace WebScraping.Classes
 {
     public class ScrapingController
     {
+        #region Fields
+
         private string _navigationUrl;
 
         private IWebDriver driver;
@@ -22,6 +24,8 @@ namespace WebScraping.Classes
         private string _selectedCurrency;
 
         private bool _isFirefoxBrowser;
+
+        #endregion
 
         public ScrapingController(string navigationUrl)
         {
@@ -77,10 +81,10 @@ namespace WebScraping.Classes
         {
             var csv = new StringBuilder();
             var currencies = driver.FindElement(By.XPath(WellKnownValues.CurrenciesField));
-            SelectElement selectList1 = new SelectElement(currencies);
-            IList<IWebElement> options1 = selectList1.Options;
-            this._selectedCurrency = options1[currencyId].Text;
-            selectList1.SelectByText(this._selectedCurrency);
+            SelectElement selectedList = new SelectElement(currencies);
+            IList<IWebElement> selectOptions = selectedList.Options;
+            this._selectedCurrency = selectOptions[currencyId].Text;
+            selectedList.SelectByText(this._selectedCurrency);
             var button = driver.FindElement(By.XPath(WellKnownValues.Button));
 
             button.Click();
@@ -139,7 +143,14 @@ namespace WebScraping.Classes
 
         public void Dispose()
         {
-            this.driver.Close();
+            try
+            {
+                this.driver.Close();
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LoggerTypesEnum.Error, $"Dispose error, message: {ex.Message}");
+            }
         }
 
         private void GetdataFromTable(StringBuilder csv, bool getHeaderFromTable = true, int pageNumber = 1)

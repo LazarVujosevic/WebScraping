@@ -8,7 +8,7 @@ namespace WebScraping.Classes
 {
     public sealed class WellKnownValues
     {
-        #region Input fields
+        #region Page elements
 
         public const string StartDateFieldName = "erectDate";
 

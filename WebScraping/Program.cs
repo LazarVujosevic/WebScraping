@@ -32,8 +32,6 @@ namespace WebScraping
                 Logger.Log(LoggerTypesEnum.Info, "Dispose Started");
                 navigation.Dispose();
                 Logger.Log(LoggerTypesEnum.Info, "Dispose Finished");
-                Console.WriteLine("Press enter to exit");
-                Console.ReadLine();
             }
         }
     }
