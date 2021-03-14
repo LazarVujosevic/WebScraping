@@ -1,5 +1,6 @@
 ﻿using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Firefox;
 using OpenQA.Selenium.Support.UI;
 using System;
 using System.Collections.Generic;
@@ -20,12 +21,41 @@ namespace WebScraping.Classes
 
         private string _selectedCurrency;
 
+        private bool _isFirefoxBrowser;
+
         public PageNavigation(string navigationUrl)
         {
             this._navigationUrl = navigationUrl;
-            this.driver = new ChromeDriver();
-            var options = new ChromeOptions();
-            options.AddArgument("no-sandbox");
+            this.SetDriverForBrowser();
+        }
+
+        private void SetDriverForBrowser()
+        {
+            try
+            {
+                Logger.Log(LoggerTypesEnum.Info, $"Trying to create Chrome Web Driver");
+                this.driver = new ChromeDriver();
+                var options = new ChromeOptions();
+                options.AddArgument("no-sandbox");
+                Logger.Log(LoggerTypesEnum.Info, $"Successfully created Chrome Web Driver");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LoggerTypesEnum.Error, $"Creating Chrome Web Driver Failed, message: {ex.Message}");
+                try
+                {
+                    Logger.Log(LoggerTypesEnum.Info, $"Trying to create Firefox Web Driver");
+                    FirefoxDriverService service = FirefoxDriverService.CreateDefaultService();
+                    service.Host = "::1";
+                    this.driver = new FirefoxDriver(service);
+                    Logger.Log(LoggerTypesEnum.Info, $"Successfully created Chrome Web Driver");
+                    this._isFirefoxBrowser = true;
+                }
+                catch (Exception exeption)
+                {
+                    Logger.Log(LoggerTypesEnum.Error, $"Creating Firefox Web Driver Failed, message: {exeption.Message}");
+                }
+            }
         }
 
         public void NavigateToPageAndFillData()
@@ -39,11 +69,11 @@ namespace WebScraping.Classes
 
             for (int i = 1; i < options.Count(); i++)
             {
-                this.DoWhatEver(i);
+                this.GetDataForCurrency(i);
             }
         }
 
-        private void DoWhatEver(int currencyId)
+        private void GetDataForCurrency(int currencyId)
         {
             var csv = new StringBuilder();
             var currencies = driver.FindElement(By.XPath(WellKnownValues.CurrenciesField));
@@ -58,9 +88,9 @@ namespace WebScraping.Classes
 
             #region Bonus Points
 
-            if (this.CheckDoesElementExists(By.ClassName("nav_pagenum")))
+            if (this.CheckDoesElementExists(By.ClassName(WellKnownValues.NumberOfPages)))
             {
-                int numberOfPages = Int32.Parse(driver.FindElement(By.ClassName("nav_pagenum")).GetAttribute("innerText"));
+                int numberOfPages = Int32.Parse(driver.FindElement(By.ClassName(WellKnownValues.NumberOfPages)).GetAttribute("innerText"));
                 if (numberOfPages != 0 && numberOfPages > 1)
                 {
                     int currentPageNumber = 1;
@@ -68,17 +98,25 @@ namespace WebScraping.Classes
                     {
                         currentPageNumber++;
                         ((IJavaScriptExecutor)driver).ExecuteScript($"PageContext.PageNav.go({currentPageNumber},{numberOfPages})");
+                        if (this._isFirefoxBrowser)
+                        {
+                            Thread.Sleep(1000);
+                        }
                         this.GetdataFromTable(csv, false, currentPageNumber);
                     }
 
                     ((IJavaScriptExecutor)driver).ExecuteScript($"PageContext.PageNav.goLast()");
+                    if (this._isFirefoxBrowser)
+                    {
+                        Thread.Sleep(1000);
+                    }
                     this.GetdataFromTable(csv, false, numberOfPages);
                 }
             }
 
-                #endregion
+            #endregion
 
-                try
+            try
             {
                 var startDateColumnValue = driver.FindElement(By.Name(WellKnownValues.StartDateFieldName)).GetAttribute("value");
                 var endDateColumnValue = driver.FindElement(By.Name(WellKnownValues.EndDateFieldName)).GetAttribute("value");

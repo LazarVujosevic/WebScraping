@@ -20,6 +20,8 @@ namespace WebScraping.Classes
 
         public const string TableForScraping = "//table[@width='640']";
 
+        public const string NumberOfPages = "nav_pagenum";
+
         #endregion
 
         #region Input formats
