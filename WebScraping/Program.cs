@@ -18,7 +18,7 @@ namespace WebScraping
         static void Main(string[] args)
         {
             Logger.Log(LoggerTypesEnum.Info, "Application Started");
-            var navigation = new PageNavigation("https://srh.bankofchina.com/search/whpj/searchen.jsp");
+            var navigation = new ScrapingController("https://srh.bankofchina.com/search/whpj/searchen.jsp");
             try
             {
                 navigation.NavigateToPageAndFillData();

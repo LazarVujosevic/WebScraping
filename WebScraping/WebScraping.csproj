@@ -79,7 +79,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Classes\Logger.cs" />
-    <Compile Include="Classes\PageNavigation.cs" />
+    <Compile Include="Classes\ScrapingController.cs" />
     <Compile Include="Classes\WellKnownValues.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

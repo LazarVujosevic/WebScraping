@@ -13,7 +13,7 @@ using WebScraping.Shared;
 
 namespace WebScraping.Classes
 {
-    public class PageNavigation
+    public class ScrapingController
     {
         private string _navigationUrl;
 
@@ -23,7 +23,7 @@ namespace WebScraping.Classes
 
         private bool _isFirefoxBrowser;
 
-        public PageNavigation(string navigationUrl)
+        public ScrapingController(string navigationUrl)
         {
             this._navigationUrl = navigationUrl;
             this.SetDriverForBrowser();
