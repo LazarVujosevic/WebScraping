@@ -1,14 +1,7 @@
-﻿using OpenQA.Selenium;
-using OpenQA.Selenium.Chrome;
-using OpenQA.Selenium.Firefox;
-using OpenQA.Selenium.Support.UI;
+﻿using HtmlAgilityPack;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using WebScraping.Shared;
 
 namespace WebScraping.Classes
@@ -19,102 +12,50 @@ namespace WebScraping.Classes
 
         private string _navigationUrl;
 
-        private IWebDriver driver;
+        private HtmlWeb _web;
 
-        private string _selectedCurrency;
-
-        private bool _isFirefoxBrowser;
+        private HtmlDocument _doc;
 
         #endregion
 
         public ScrapingController(string navigationUrl)
         {
             this._navigationUrl = navigationUrl;
-            this.SetDriverForBrowser();
-        }
-
-        private void SetDriverForBrowser()
-        {
-            try
-            {
-                Logger.Log(LoggerTypesEnum.Info, $"Trying to create Chrome Web Driver");
-                this.driver = new ChromeDriver();
-                var options = new ChromeOptions();
-                options.AddArgument("no-sandbox");
-                Logger.Log(LoggerTypesEnum.Info, $"Successfully created Chrome Web Driver");
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LoggerTypesEnum.Error, $"Creating Chrome Web Driver Failed, message: {ex.Message}");
-                try
-                {
-                    Logger.Log(LoggerTypesEnum.Info, $"Trying to create Firefox Web Driver");
-                    FirefoxDriverService service = FirefoxDriverService.CreateDefaultService();
-                    service.Host = "::1";
-                    this.driver = new FirefoxDriver(service);
-                    Logger.Log(LoggerTypesEnum.Info, $"Successfully created Chrome Web Driver");
-                    this._isFirefoxBrowser = true;
-                }
-                catch (Exception exeption)
-                {
-                    Logger.Log(LoggerTypesEnum.Error, $"Creating Firefox Web Driver Failed, message: {exeption.Message}");
-                }
-            }
+            this._web = new HtmlWeb();
+            this._doc = _web.Load(this._navigationUrl);
         }
 
         public void NavigateToPageAndFillData()
         {
-            this.driver.Navigate().GoToUrl(this._navigationUrl);
-            this.driver.FindElement(By.Name(WellKnownValues.StartDateFieldName)).SendKeys(DateTime.Now.AddDays(-2).ToString(WellKnownValues.DateInputFormat));
-            this.driver.FindElement(By.Name(WellKnownValues.EndDateFieldName)).SendKeys(DateTime.Now.ToString(WellKnownValues.DateInputFormat));
-            var currencies = driver.FindElement(By.XPath(WellKnownValues.CurrenciesField));
-            SelectElement selectList = new SelectElement(currencies);
-            IList<IWebElement> options = selectList.Options;
-
-            for (int i = 1; i < options.Count(); i++)
+            foreach (HtmlNode node in _doc.DocumentNode.SelectNodes(WellKnownValues.CurrenciesSelect))
             {
-                this.GetDataForCurrency(i);
+                if (node.InnerText != WellKnownValues.SelectTheCurrentyOption)
+                {
+                    this.GetDataForCurrency(node.InnerText);
+                }
             }
         }
 
-        private void GetDataForCurrency(int currencyId)
+        private void GetDataForCurrency(string value)
         {
             var csv = new StringBuilder();
-            var currencies = driver.FindElement(By.XPath(WellKnownValues.CurrenciesField));
-            SelectElement selectedList = new SelectElement(currencies);
-            IList<IWebElement> selectOptions = selectedList.Options;
-            this._selectedCurrency = selectOptions[currencyId].Text;
-            selectedList.SelectByText(this._selectedCurrency);
-            var button = driver.FindElement(By.XPath(WellKnownValues.Button));
-
-            button.Click();
-            this.GetdataFromTable(csv);
+            var document = _web.Load($"{this._navigationUrl}?{WellKnownValues.CurrenciesFieldId}={value}&{WellKnownValues.StartDateId}={DateTime.Now.AddDays(-2).ToString(WellKnownValues.DateInputFormat)}&{WellKnownValues.EndDateId}={DateTime.Now.ToString(WellKnownValues.DateInputFormat)}");
+            this.GetdataFromTable(csv, document, value);
 
             #region Bonus Points
 
-            if (this.CheckDoesElementExists(By.ClassName(WellKnownValues.NumberOfPages)))
+            
+            if (csv.ToString() != WellKnownValues.NoRecordsMessage)
             {
-                int numberOfPages = Int32.Parse(driver.FindElement(By.ClassName(WellKnownValues.NumberOfPages)).GetAttribute("innerText"));
-                if (numberOfPages != 0 && numberOfPages > 1)
+                int pageNumber = 2;
+                string previousPageHtml = document.Text;
+                var documentNewPage = _web.Load($"{this._navigationUrl}?{WellKnownValues.CurrenciesFieldId}={value}&{WellKnownValues.StartDateId}={DateTime.Now.AddDays(-2).ToString(WellKnownValues.DateInputFormat)}&{WellKnownValues.EndDateId}={DateTime.Now.ToString(WellKnownValues.DateInputFormat)}&page={pageNumber}");
+                while (previousPageHtml != documentNewPage.Text)
                 {
-                    int currentPageNumber = 1;
-                    while (currentPageNumber < numberOfPages - 1)
-                    {
-                        currentPageNumber++;
-                        ((IJavaScriptExecutor)driver).ExecuteScript($"PageContext.PageNav.go({currentPageNumber},{numberOfPages})");
-                        if (this._isFirefoxBrowser)
-                        {
-                            Thread.Sleep(1000);
-                        }
-                        this.GetdataFromTable(csv, false, currentPageNumber);
-                    }
-
-                    ((IJavaScriptExecutor)driver).ExecuteScript($"PageContext.PageNav.goLast()");
-                    if (this._isFirefoxBrowser)
-                    {
-                        Thread.Sleep(1000);
-                    }
-                    this.GetdataFromTable(csv, false, numberOfPages);
+                    this.GetdataFromTable(csv, documentNewPage, value, false, pageNumber);
+                    previousPageHtml = documentNewPage.Text;
+                    pageNumber++;
+                    documentNewPage = _web.Load($"{this._navigationUrl}?{WellKnownValues.CurrenciesFieldId}={value}&{WellKnownValues.StartDateId}={DateTime.Now.AddDays(-2).ToString(WellKnownValues.DateInputFormat)}&{WellKnownValues.EndDateId}={DateTime.Now.ToString(WellKnownValues.DateInputFormat)}&page={pageNumber}");
                 }
             }
 
@@ -122,9 +63,9 @@ namespace WebScraping.Classes
 
             try
             {
-                var startDateColumnValue = driver.FindElement(By.Name(WellKnownValues.StartDateFieldName)).GetAttribute("value");
-                var endDateColumnValue = driver.FindElement(By.Name(WellKnownValues.EndDateFieldName)).GetAttribute("value");
-                var fileName = $"{startDateColumnValue.Replace('-', '.')}-{endDateColumnValue.Replace('-', '.')}-{this._selectedCurrency}";
+                var startDateColumnValue = DateTime.Now.AddDays(-2).ToString(WellKnownValues.DateFormatForSaveFile);
+                var endDateColumnValue = DateTime.Now.ToString(WellKnownValues.DateFormatForSaveFile);
+                var fileName = $"{startDateColumnValue}-{endDateColumnValue}-{value}";
                 Logger.Log(LoggerTypesEnum.Info, $"Started Saving file {fileName}.csv");
                 this.SaveCsvFile(csv.ToString(), fileName);
                 Logger.Log(LoggerTypesEnum.Info, $"Sucessfully saved file {fileName}.csv");
@@ -139,62 +80,38 @@ namespace WebScraping.Classes
         {
             var filePath = System.Configuration.ConfigurationManager.AppSettings["FileSaveLocation"];
             File.WriteAllText($@"{filePath}{fileName}.csv", csv.ToString());
-        }
+        }       
 
-        public void Dispose()
+        private void GetdataFromTable(StringBuilder csv, HtmlDocument document, string value, bool getHeaderFromTable = true, int pageNumber = 1)
         {
-            try
-            {
-                this.driver.Close();
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LoggerTypesEnum.Error, $"Dispose error, message: {ex.Message}");
-            }
-        }
-
-        private void GetdataFromTable(StringBuilder csv, bool getHeaderFromTable = true, int pageNumber = 1)
-        {
-            var table = driver.FindElement(By.XPath(WellKnownValues.TableForScraping));
-            var rows = table.FindElements(By.TagName("tr"));
-            Logger.Log(LoggerTypesEnum.Info, $"Started Getting data for currency {this._selectedCurrency}, page number: {pageNumber}");
+            var table = document.DocumentNode.SelectSingleNode(WellKnownValues.TableForScraping);
+            var rows = table.SelectNodes(WellKnownValues.TrElement);
+            Logger.Log(LoggerTypesEnum.Info, $"Started Getting data for currency {value}, page number: {pageNumber}");
             int rowNumber = 0;
             foreach (var row in rows)
             {
-                 if (!getHeaderFromTable && rowNumber == 0)
+                if (!getHeaderFromTable && rowNumber == 0)
                 {
                     rowNumber++;
                     continue;
                 }
+
                 string rowString = string.Empty;
-                var rowTds = row.FindElements(By.TagName("td"));
+                var rowTds = row.SelectNodes(WellKnownValues.TdElement);
+
                 foreach (var td in rowTds)
                 {
-                    if (td.Text != WellKnownValues.WrongWordSumbitMessage)
-                    {
-                        rowString += $"{td.Text},";
-                    }
+                   rowString += $"{td.InnerText},";
                 }
+
                 if (rowString.Length > 0)
                 {
                     rowString = rowString.Remove(rowString.Length - 1, 1);
                 }
+
                 csv.AppendLine(rowString);
                 rowNumber++;
             }
-        }
-
-        private bool CheckDoesElementExists(By by)
-        {
-            try
-            {
-                driver.FindElement(by);
-                return true;
-            }
-            catch (NoSuchElementException)
-            {
-                return false;
-            }
-        }
+        }        
     }
 }

@@ -10,17 +10,21 @@ namespace WebScraping.Classes
     {
         #region Page elements
 
-        public const string StartDateFieldName = "erectDate";
-
-        public const string EndDateFieldName = "nothing";
-
-        public const string CurrenciesField = "//select[@name='pjname']";
-
-        public const string Button = "//input[@type='button']";
-
         public const string TableForScraping = "//table[@width='640']";
 
-        public const string NumberOfPages = "nav_pagenum";
+        public const string CurrenciesFieldId = "pjname";
+
+        public const string StartDateId = "erectDate";
+
+        public const string EndDateId = "nothing";
+
+        public const string CurrenciesSelect = "//select[@name='pjname']/option";
+
+        public const string NoRecordsMessage = "sorry, no records！\r\n";
+
+        public const string TrElement = "tr";
+
+        public const string TdElement = "td";
 
         #endregion
 
@@ -28,12 +32,10 @@ namespace WebScraping.Classes
 
         public const string DateInputFormat = "yyyy-MM-dd";
 
-        #endregion
+        public const string DateFormatForSaveFile = "yyyy.MM.dd";
 
-        #region Page Messages
+        #endregion      
 
-        public const string WrongWordSumbitMessage = "soryy,wrong search word submit,please check your search word!";
-
-        #endregion
+        public const string SelectTheCurrentyOption = "Select the currency";
     }
 }

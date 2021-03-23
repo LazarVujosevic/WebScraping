@@ -16,11 +16,6 @@ namespace WebScraping.Classes
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.Write("[INFO] ");
             }
-            else if (type == LoggerTypesEnum.Warning)
-            {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.Write("[WARNING] ");
-            }
             else if (type == LoggerTypesEnum.Error)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
