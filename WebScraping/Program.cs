@@ -9,7 +9,7 @@ namespace WebScraping
         static void Main(string[] args)
         {
             Logger.Log(LoggerTypesEnum.Info, "Application Started");
-           
+
             try
             {
                 var navigation = new ScrapingController("https://srh.bankofchina.com/search/whpj/searchen.jsp");
@@ -19,7 +19,11 @@ namespace WebScraping
             {
                 Logger.Log(LoggerTypesEnum.Error, $"Navigation Fail, exception : {ex.Message}");
             }
-            
+            finally
+            {
+                Console.WriteLine("Press Enter to exit");
+                Console.ReadLine();
+            }
         }
     }
 }
